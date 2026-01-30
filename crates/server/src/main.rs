@@ -85,17 +85,27 @@ async fn main() -> Result<(), VibeKanbanError> {
 
     let app_router = routes::router(deployment.clone());
 
-    let port = std::env::var("BACKEND_PORT")
-        .or_else(|_| std::env::var("PORT"))
-        .ok()
-        .and_then(|s| {
-            // remove any ANSI codes, then turn into String
-            let cleaned =
-                String::from_utf8(strip(s.as_bytes())).expect("UTF-8 after stripping ANSI");
-            cleaned.trim().parse::<u16>().ok()
+    // Parse command line arguments for --port
+    let args: Vec<String> = std::env::args().collect();
+    let cli_port = args
+        .windows(2)
+        .find(|w| w[0] == "--port")
+        .and_then(|w| w[1].parse::<u16>().ok());
+
+    let port = cli_port
+        .or_else(|| {
+            std::env::var("BACKEND_PORT")
+                .or_else(|_| std::env::var("PORT"))
+                .ok()
+                .and_then(|s| {
+                    // remove any ANSI codes, then turn into String
+                    let cleaned =
+                        String::from_utf8(strip(s.as_bytes())).expect("UTF-8 after stripping ANSI");
+                    cleaned.trim().parse::<u16>().ok()
+                })
         })
         .unwrap_or_else(|| {
-            tracing::info!("No PORT environment variable set, using port 0 for auto-assignment");
+            tracing::info!("No --port argument or PORT environment variable set, using port 0 for auto-assignment");
             0
         }); // Use 0 to find free port if no specific port provided
 
