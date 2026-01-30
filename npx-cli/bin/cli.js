@@ -190,11 +190,14 @@ async function main() {
     const modeLabel = LOCAL_DEV_MODE ? " (local dev)" : "";
     console.log(`Starting vibe-kanban v${CLI_VERSION}${modeLabel}...`);
     await extractAndRun("vibe-kanban", (bin) => {
-      if (platform === "win32") {
-        execSync(`"${bin}"`, { stdio: "inherit" });
-      } else {
-        execSync(`"${bin}"`, { stdio: "inherit" });
-      }
+      const proc = spawn(bin, args, { stdio: "inherit" });
+      proc.on("exit", (c) => process.exit(c || 0));
+      proc.on("error", (e) => {
+        console.error("Error:", e.message);
+        process.exit(1);
+      });
+      process.on("SIGINT", () => proc.kill("SIGINT"));
+      process.on("SIGTERM", () => proc.kill("SIGTERM"));
     });
   }
 }
